@@ -17,26 +17,35 @@ jobs:
         with:
           channel: 'stable'
 
-      # 🟢 核心修复步骤：创建一个假的 key.properties 文件来骗过构建脚本
-      - name: Create dummy key.properties
+      # 🟢 第一步：现场生成一个签名证书 (Keystore)
+      - name: Generate Keystore
         run: |
-          # 确保目录存在
-          mkdir -p simple_live_app/android
-          # 写入假的配置信息 (Debug 模式不会验证这些，只要有值就行)
-          echo "storePassword=android" > simple_live_app/android/key.properties
-          echo "keyPassword=android" >> simple_live_app/android/key.properties
-          echo "keyAlias=androiddebugkey" >> simple_live_app/android/key.properties
-          echo "storeFile=../app/keystore.jks" >> simple_live_app/android/key.properties
+          # 进入安卓目录
+          cd simple_live_app/android/app
+          # 使用 keytool 生成一个有效期 10000 天的证书
+          keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias my-alias -storepass 123456 -keypass 123456 -dname "CN=User, OU=User, O=User, L=City, S=State, C=US"
 
-      - name: Build Android APK (Debug)
+      # 🟢 第二步：创建配置文件指向刚才生成的证书
+      - name: Create key.properties
+        run: |
+          cd simple_live_app/android
+          echo "storePassword=123456" > key.properties
+          echo "keyPassword=123456" >> key.properties
+          echo "keyAlias=my-alias" >> key.properties
+          # 指向我们在上一步生成的 my-release-key.jks
+          echo "storeFile=my-release-key.jks" >> key.properties
+
+      # 🟢 第三步：编译真正的 Release 版 (去掉了 --debug 参数)
+      - name: Build Android APK (Release)
         run: |
           cd simple_live_app
           flutter pub get
-          # 编译 Debug 包
-          flutter build apk --debug --no-tree-shake-icons --build-name=1.0.0 --build-number=1
+          # 关键：这里用 --release，界面就干净了
+          flutter build apk --release --no-tree-shake-icons --build-name=1.0.0 --build-number=1
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: simple_live_app/build/app/outputs/flutter-apk/app-debug.apk
+          name: app-release
+          # 注意：路径里的 debug 变成了 release
+          path: simple_live_app/build/app/outputs/flutter-apk/app-release.apk
