@@ -16,17 +16,27 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          
+
+      # 🟢 核心修复步骤：创建一个假的 key.properties 文件来骗过构建脚本
+      - name: Create dummy key.properties
+        run: |
+          # 确保目录存在
+          mkdir -p simple_live_app/android
+          # 写入假的配置信息 (Debug 模式不会验证这些，只要有值就行)
+          echo "storePassword=android" > simple_live_app/android/key.properties
+          echo "keyPassword=android" >> simple_live_app/android/key.properties
+          echo "keyAlias=androiddebugkey" >> simple_live_app/android/key.properties
+          echo "storeFile=../app/keystore.jks" >> simple_live_app/android/key.properties
+
       - name: Build Android APK (Debug)
         run: |
           cd simple_live_app
           flutter pub get
-          # 关键修改：这里改成了 --debug，这样就不需要签名密码了
+          # 编译 Debug 包
           flutter build apk --debug --no-tree-shake-icons --build-name=1.0.0 --build-number=1
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          # 关键修改：路径里的 release 也改成了 debug
           path: simple_live_app/build/app/outputs/flutter-apk/app-debug.apk
