@@ -17,17 +17,16 @@ jobs:
         with:
           channel: 'stable'
           
-      - name: Build Android APK
+      - name: Build Android APK (Debug)
         run: |
-          # 进入 App 目录 (最关键的一步)
           cd simple_live_app
-          # 安装依赖
           flutter pub get
-          # 强制指定版本号，跳过所有 Git 检查
-          flutter build apk --release --no-tree-shake-icons --build-name=1.0.0 --build-number=1
+          # 关键修改：这里改成了 --debug，这样就不需要签名密码了
+          flutter build apk --debug --no-tree-shake-icons --build-name=1.0.0 --build-number=1
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: simple_live_app/build/app/outputs/flutter-apk/app-release.apk
+          name: app-debug
+          # 关键修改：路径里的 release 也改成了 debug
+          path: simple_live_app/build/app/outputs/flutter-apk/app-debug.apk
